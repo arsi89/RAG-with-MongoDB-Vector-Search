@@ -5,11 +5,11 @@ from typing import List
 
 from pymongo import MongoClient
 from pymongo.operations import SearchIndexModel
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
-from openai import OpenAI
+
 
 # ENVIRONMENT SETUP
 load_dotenv()
@@ -20,7 +20,11 @@ MONGO_URI = os.getenv("MongoURI")
 if not OPENAI_API_KEY or not MONGO_URI:
     raise EnvironmentError("Missing required environment variables")
 
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+openai_client = ChatOpenAI(
+    model="gpt-5-nano",
+    api_key=OPENAI_API_KEY,
+    temperature=0
+    )
 mongo_client = MongoClient(MONGO_URI)
 
 DB_NAME = "RAG"
@@ -33,13 +37,13 @@ collection = mongo_client[DB_NAME][COLLECTION_NAME]
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIM = 1536  # MUST match model
 
-def get_embedding(text: str) -> List[float]:
-    response = openai_client.embeddings.create(
-        model=EMBEDDING_MODEL,
-        input=text
-    )
-    return response.data[0].embedding
+embeddings = OpenAIEmbeddings(
+    model="text-embedding-3-small"
+)
 
+def get_embedding(text: str) -> List[float]:
+    response = embeddings.embed_query(text)
+    return response
 
 # INGESTION
 def ingest_pdf(pdf_url: str):
